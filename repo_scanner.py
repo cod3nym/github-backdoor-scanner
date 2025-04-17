@@ -81,7 +81,7 @@ def scan_repository(repo_url):
     matches_found = {}
 
     for item in tree:
-        if item["type"] == "blob" and (item["path"].endswith(".csproj") or item["path"].endswith(".vbproj")):
+        if item["type"] == "blob" and (item["path"].endswith(".csproj") or item["path"].endswith(".vbproj") or item["path"].endswith(".vcxproj")):
             try:
                 content = get_file_content(owner, repo, item["path"])
                 found = [s for s in TARGET_STRINGS if s in content]
