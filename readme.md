@@ -6,7 +6,7 @@ A tool to scan GitHub repositories for potentially infected MSBuild project file
 
 This project provides two components:
 - A Python script that scans GitHub repositories for suspicious patterns in MSBuild project files
-- A simple web interface for visualizing and analyzing the results
+- A simple web interface for quick scannning without an API token
 
 ## Requirements
 
@@ -22,6 +22,10 @@ cd github-backdoor-scanner
 ```
 
 ## Usage
+
+### Web Interface
+
+Visit https://cod3nym.github.io/github-backdoor-scanner/
 
 ### Python Script
 
