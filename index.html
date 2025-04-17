@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Project Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-5">
+  <h1>GitHub Backdoor Scanner</h1>
+  <h5 class="mb-4">Scan for infected MSBuild project files</h5>
+
+  <form id="scanForm">
+    <div class="mb-3">
+      <label for="repoUrl" class="form-label">GitHub Repository URL</label>
+      <input type="url" class="form-control" id="repoUrl" placeholder="https://github.com/owner/repo" required>
+    </div>
+    <div class="mb-3">
+      <label for="token" class="form-label">GitHub API Token (optional)</label>
+      <input type="text" class="form-control" id="token" placeholder="github_pat_YourTokenHere">
+    </div>
+    <button type="submit" class="btn btn-primary">Scan Repository</button>
+  </form>
+
+  <hr>
+  <div id="errors" class="mt-4"></div>
+  <div id="results" class="mt-4"></div>
+</div>
+
+<script>
+  const TARGET_STRINGS =  [
+    "PreBuildEvent",
+    "PostBuildEvent",
+    "Exec",
+    "Command=",
+    "@echo off",
+    "cscript",
+    "//nologo",
+    "cmd.exe",
+    "-hidden",
+    "ExecutionPolicy",
+    "powershell.exe",
+    "wscript.exe",
+    ".vbs",
+];
+
+  document.getElementById('scanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const repoUrl = document.getElementById('repoUrl').value.trim();
+    const token = document.getElementById('token').value.trim();
+    const resultsDiv = document.getElementById('results');
+    const errorsDiv = document.getElementById('errors');
+    resultsDiv.innerHTML = '<div class="spinner-border" role="status"></div> Scanning...';
+
+    try {
+      const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(\.git)?(\/$)?$/);
+      if (!match) throw new Error("Invalid GitHub repository URL. Please enter a valid GitHub repository URL");
+    
+      const owner = encodeURIComponent(match[1]);
+      const repo = encodeURIComponent(match[2]);
+
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      if (token) headers['Authorization'] = `token ${token}`;
+
+      const repoInfo = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+      if (!repoInfo.ok) throw new Error("Failed to fetch repository info.");
+      const repoData = await repoInfo.json();
+      const branch = repoData.default_branch;
+
+      const treeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, { headers });
+      if (!treeResp.ok) throw new Error("Failed to fetch repository tree.");
+      const treeData = await treeResp.json();
+
+      const projectFiles = treeData.tree.filter(item => item.type === 'blob' && (item.path.endsWith('.csproj') || item.path.endsWith('.vbproj' || item.path.endsWith('.vxproj'))));
+      const matches = [];
+
+      for (const file of projectFiles) {
+        const contentResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(file.path)}`, { headers });  // Encode URL values to avoid errors with special chatacters for strings like C#
+        if (!contentResp.ok) {
+            errorsDiv.innerHTML += `<div class="alert alert-danger">Error fetching file content: ${contentResp.statusText}</div>`;
+            continue;
+        }
+        const contentData = await contentResp.json();
+        const content = atob(contentData.content || '');
+        const found = TARGET_STRINGS.filter(str => content.includes(str));
+        if (found.length >= 2) {
+          matches.push({ path: file.path, found });
+        }
+      }
+
+      if (matches.length === 0) {
+        resultsDiv.innerHTML = '<div class="alert alert-info">No matches found.</div>';
+      } else {
+        let html = '<h4>Matches Found:</h4><ul class="list-group">';
+        for (const match of matches) {
+          html += `<li class="list-group-item"><div class="alert alert-danger"><strong>${match.path}</strong><br>Matched: ${match.found.join(', ')}</div></li>`;
+        }
+        html += '</ul>';
+        resultsDiv.innerHTML = html;
+      }
+    } catch (err) {
+      resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+    }
+  });
+</script>
+<footer class="footer text-center">
+    <div class="container">
+        <p>Developed by <a href="https://x.com/cod3nym/">Jonathan Peters</a></p>
+    </div>
+</footer>
+</body>
+</html>
