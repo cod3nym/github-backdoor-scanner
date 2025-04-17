@@ -75,7 +75,7 @@
       if (!treeResp.ok) throw new Error("Failed to fetch repository tree.");
       const treeData = await treeResp.json();
 
-      const projectFiles = treeData.tree.filter(item => item.type === 'blob' && (item.path.endsWith('.csproj') || item.path.endsWith('.vbproj' || item.path.endsWith('.vxproj'))));
+      const projectFiles = treeData.tree.filter(item => item.type === 'blob' && (item.path.endsWith('.csproj') || item.path.endsWith('.vbproj' || item.path.endsWith('.vcxproj'))));
       const matches = [];
 
       for (const file of projectFiles) {
