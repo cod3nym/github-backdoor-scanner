@@ -25,6 +25,8 @@ TARGET_STRINGS = [
     "powershell.exe",
     "wscript.exe",
     ".vbs",
+    "CreateObject(",
+    "&quot;WScript.Shell&quot;",
 ]
 
 API_BASE = "https://api.github.com"
